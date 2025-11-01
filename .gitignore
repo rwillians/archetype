@@ -1,0 +1,13 @@
+/priv/plts/*.plt.hash
+/priv/plts/*.plt
+/.elixir_ls/
+/_build/
+/cover/
+/deps/
+/tmp/
+/doc/
+*.ez
+.fetch
+.DS_Store
+erl_crash.dump
+archetype-*.tar

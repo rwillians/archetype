@@ -1,7 +1,29 @@
 # Archetype
 
 **Archetype** is a schema validator and parser heavely inspired by
-TypeScript's [ArkType](https://arktype.io).
+TypeScript's [Zod](https://zod.dev) and [ArkType](https://arktype.io).
+
+## Usage
+
+Zod-like API:
+
+```elixir
+alias Archetype, as: Z
+
+@schema Z.map(%{
+          name: Z.string() |> Z.min(1) |> Z.max(100),
+          age: Z.integer() |> Z.min(18) |> Z.optional(),
+          email: Z.email() |> Z.optional(),
+          phone: Z.numeric() |> Z.optional(),
+          last_contacted_at: Z.datetime() |> Z.optional()
+        })
+
+@type t() :: unquote(Z.to_spec(@schema))
+
+Z.parse(@schema, conn.body_params)
+```
+
+ArkType-like API:
 
 ```elixir
 use Archetype
@@ -10,22 +32,16 @@ use Archetype
           name: type("1 <= string <= 100"),
           age: type("(integer >= 18) | nil"),
           email: type("string.email | nil"),
-          phone: type("string.phone | nil"),
+          phone: type("string.numeric | nil"),
           last_contacted_at: type("DateTime.t() | nil")
         })
 
 @type t() :: unquote(Archetype.to_spec(@schema))
 
-case Archetype.parse(@schema, conn.body_params) do
-  {:ok, params} ->
-    Logger.info("Valid params: #{inspect(params)}")
-
-  {:error, issues} ->
-    Logger.error("Failed validation: #{inspect(Archetype.to_errors_by_field(issues))}")
-end
+Archetype.parse(@schema, conn.body_params)
 ```
 
-See the full [documentation](https://hexdocs.pm/archetype/Archetype.html) at hexdocs.
+See the full [documentation](https://hexdocs.pm/archetype) at hexdocs.
 
 
 ## Installation

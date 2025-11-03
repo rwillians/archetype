@@ -4,13 +4,15 @@ defprotocol Archetype.Type do
   """
 
   @doc ~S"""
-  Parses the given value according to the type definition.
+  Parses and validates the given value according to the given type
+  definition.
   """
-  @spec parse(t, term) ::
+  @spec parse(t, term, [option]) ::
           {:ok, term}
           | {:error, [Archetype.Issue.t(), ...]}
+        when option: {:coerce, boolean}
 
-  def parse(type, value)
+  def parse(type, value, opts \\ [])
 
   @doc ~S"""
   Derives the type specification AST from a given type.

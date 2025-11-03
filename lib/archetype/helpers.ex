@@ -3,13 +3,49 @@ defmodule Archetype.Helpers do
 
   import Keyword, only: [keyword?: 1]
 
-  @doc false
-  defdelegate issue(text, ctx \\ %{}), to: Archetype.Issue
+  @doc ~S"""
+  Alias to `Kernel.inspect/1`.
+  """
+  @spec i(any) :: String.t()
 
-  @doc false
+  def i(value), do: inspect(value)
+
+  @doc ~S"""
+  Casts the given value to an atom.
+
+      iex> to_atom(:example)
+      :example
+
+      iex> to_atom("example")
+      :example
+
+      iex> to_atom("asdfadsf")
+      :asdfadsf
+
+  """
+  @spec to_atom(atom | String.t()) :: atom
+
+  def to_atom(value) when is_atom(value), do: value
+
+  def to_atom(<<_, _::binary>> = value) do
+    String.to_existing_atom(value)
+  rescue
+    _ -> String.to_atom(value)
+  end
+
+  @doc ~S"""
+  Returns the module name as a string without the "Elixir." prefix.
+
+      iex> to_mod_name(Archetype.Type.String)
+      "Archetype.Type.String"
+
+      iex> to_mod_name(Elixir.Archetype.Type.String)
+      "Archetype.Type.String"
+
+  """
   def to_mod_name(mod)
       when is_atom(mod),
-      do: String.replace(to_string(mod), ~r/^Elixir\./, "")
+      do: String.trim_leading(to_string(mod), "Elixir.")
 
   @doc false
   def typeof(nil), do: "nil"
@@ -28,20 +64,4 @@ defmodule Archetype.Helpers do
   def typeof(value) when is_pid(value), do: "pid"
   def typeof(value) when is_port(value), do: "port"
   def typeof(value) when is_reference(value), do: "reference"
-
-  @doc false
-  def validate_required(nil), do: {:error, issue("is required")}
-
-  @doc false
-  def validate_type(value, expected_type) do
-    ctx = %{
-      expected: to_string(expected_type),
-      actual: typeof(value)
-    }
-
-    case ctx.expected == ctx.actual do
-      true -> :ok
-      false -> {:error, issue("expected type {{expected}}, got {{actual}}", ctx)}
-    end
-  end
 end

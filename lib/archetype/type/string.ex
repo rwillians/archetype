@@ -1,4 +1,4 @@
-defmodule Archetype.String do
+defmodule Archetype.Type.String do
   @moduledoc ~S"""
   Describes a string type.
   """
@@ -7,7 +7,7 @@ defmodule Archetype.String do
 
   @typedoc ~S"""
   """
-  @type t() :: %Archetype.String{
+  @type t() :: %Archetype.Type.String{
           trim: boolean,
           length: Archetype.Option.t(non_neg_integer) | nil,
           min: Archetype.Option.t(non_neg_integer) | nil,
@@ -30,7 +30,7 @@ defmodule Archetype.String do
                | {:max, Archetype.Option.t(non_neg_integer())}
 
   def new(opts \\ []) do
-    Enum.reduce(opts, %Archetype.String{}, fn
+    Enum.reduce(opts, %Archetype.Type.String{}, fn
       {:trim, value}, type -> trim(type, value)
       {:length, {value, opts}}, type -> length(type, value, opts)
       {:length, value}, type -> length(type, value)
@@ -38,7 +38,7 @@ defmodule Archetype.String do
       {:min, value}, type -> min(type, value)
       {:max, {value, opts}}, type -> max(type, value, opts)
       {:max, value}, type -> max(type, value)
-      {key, _}, _ -> raise(ArgumentError, "Unknown option #{inspect(key)} for Archetype.String")
+      {key, _}, _ -> raise(ArgumentError, "Unknown option #{inspect(key)} for Archetype.Type.String")
     end)
   end
 
@@ -47,7 +47,7 @@ defmodule Archetype.String do
   """
   @spec trim(t, boolean | nil) :: t
 
-  def trim(%Archetype.String{} = type, value)
+  def trim(%Archetype.Type.String{} = type, value)
       when is_boolean(value)
       when is_nil(value),
       do: %{type | trim: value}
@@ -59,11 +59,15 @@ defmodule Archetype.String do
 
   def length(type, value, opts \\ [])
 
-  def length(%Archetype.String{} = type, nil, _), do: %{type | length: nil}
+  def length(%Archetype.Type.String{} = type, nil, _),
+    do: %{type | length: nil}
 
-  @opts error: "must be exactly {{expected}} {{character * expected}} long"
-  def length(%Archetype.String{} = type, value, opts)
-      when is_integer(value) and value > -1 and is_list(opts),
+  # @TODO add signature that raises an informative error if :length is
+  #       less than 1
+
+  @opts error: "must be exactly {{expected}} {{expected -> character/characters}} long"
+  def length(%Archetype.Type.String{} = type, value, opts)
+      when is_integer(value) and value > 0 and is_list(opts),
       do: %{type | length: Archetype.Option.new(value, @opts, opts)}
 
   @doc ~S"""
@@ -73,14 +77,18 @@ defmodule Archetype.String do
 
   def min(type, value, opts \\ [])
 
-  def min(%Archetype.String{} = type, nil, _), do: %{type | min: nil}
+  def min(%Archetype.Type.String{} = type, nil, _),
+    do: %{type | min: nil}
 
-  def min(%Archetype.String{max: max}, value, _)
+  # @TODO add signature that raises an informative error if :min is
+  #       less than 0
+
+  def min(%Archetype.Type.String{max: max}, value, _)
       when is_integer(value) and is_integer(max) and value > max,
-      do: raise(ArgumentError, ":min cannot be greater than :max")
+      do: raise(ArgumentError, "the value of option :min must be less than the value of option :max")
 
-  @opts error: "must be at least {{expected}} {{character * expected}} long"
-  def min(%Archetype.String{} = type, value, opts)
+  @opts error: "must be at least {{expected}} {{expected -> character/characters}} long"
+  def min(%Archetype.Type.String{} = type, value, opts)
       when is_integer(value) and value > -1 and is_list(opts),
       do: %{type | min: Archetype.Option.new(value, @opts, opts)}
 
@@ -91,25 +99,28 @@ defmodule Archetype.String do
 
   def max(type, value, opts \\ [])
 
-  def max(%Archetype.String{} = type, nil, _), do: %{type | max: nil}
+  def max(%Archetype.Type.String{} = type, nil, _), do: %{type | max: nil}
 
-  def max(%Archetype.String{min: min}, value, _)
+  # @TODO add signature that raises an informative error if :max is
+  #       less than 1
+
+  def max(%Archetype.Type.String{min: min}, value, _)
       when is_integer(value) and is_integer(min) and value < min,
-      do: raise(ArgumentError, ":max cannot be less than :min")
+      do: raise(ArgumentError, "the value of option :max must be greater than the value of option :min")
 
   @opts error: "must be at most {{expected}} {{character * expected}} long"
-  def max(%Archetype.String{} = type, value, opts)
-      when is_integer(value) and value > -1 and is_list(opts),
+  def max(%Archetype.Type.String{} = type, value, opts)
+      when is_integer(value) and value > 0 and is_list(opts),
       do: %{type | max: Archetype.Option.new(value, @opts, opts)}
 end
 
-defimpl Archetype.Type, for: Archetype.String do
-  import Archetype.Helpers
+defimpl Archetype.Type, for: Archetype.Type.String do
+  import Archetype.Commons
 
   @impl Archetype.Type
-  def parse(%Archetype.String{} = type, value) do
+  def parse(%Archetype.Type.String{} = type, value, _) do
     with :ok <- validate_required(value),
-         :ok <- validate_type(value, :string),
+         :ok <- validate_type(value, "string"),
          value <- trim(type, value),
          :ok <- validate_length(type, value),
          :ok <- validate_min(type, value),
@@ -118,17 +129,17 @@ defimpl Archetype.Type, for: Archetype.String do
   end
 
   @impl Archetype.Type
-  def to_spec(%Archetype.String{}), do: quote(do: String.t())
+  def to_spec(%Archetype.Type.String{}), do: quote(do: String.t())
 
   #
   #   PRIVATE
   #
 
-  defp trim(%Archetype.String{trim: true}, value), do: String.trim(value)
-  defp trim(%Archetype.String{trim: false}, value), do: value
+  defp trim(%Archetype.Type.String{trim: true}, value), do: String.trim(value)
+  defp trim(%Archetype.Type.String{}, value), do: value
 
-  defp validate_length(%Archetype.String{length: nil}, _), do: :ok
-  defp validate_length(%Archetype.String{length: opt}, value) do
+  defp validate_length(%Archetype.Type.String{length: nil}, _), do: :ok
+  defp validate_length(%Archetype.Type.String{length: opt}, value) do
     ctx = %{
       expected: opt.value,
       actual: String.length(value)
@@ -136,12 +147,12 @@ defimpl Archetype.Type, for: Archetype.String do
 
     case ctx.actual == ctx.expected do
       true -> :ok
-      false -> {:error, issue(opt.error, ctx)}
+      false -> {:error, [Archetype.Issue.from(opt.error, ctx)]}
     end
   end
 
-  defp validate_min(%Archetype.String{min: nil}, _), do: :ok
-  defp validate_min(%Archetype.String{min: opt}, value) do
+  defp validate_min(%Archetype.Type.String{min: nil}, _), do: :ok
+  defp validate_min(%Archetype.Type.String{min: opt}, value) do
     ctx = %{
       expected: opt.value,
       actual: String.length(value)
@@ -149,12 +160,12 @@ defimpl Archetype.Type, for: Archetype.String do
 
     case ctx.actual >= ctx.expected do
       true -> :ok
-      false -> {:error, issue(opt.error, ctx)}
+      false -> {:error, [Archetype.Issue.from(opt.error, ctx)]}
     end
   end
 
-  defp validate_max(%Archetype.String{max: nil}, _), do: :ok
-  defp validate_max(%Archetype.String{max: opt}, value) do
+  defp validate_max(%Archetype.Type.String{max: nil}, _), do: :ok
+  defp validate_max(%Archetype.Type.String{max: opt}, value) do
     ctx = %{
       expected: opt.value,
       actual: String.length(value)
@@ -162,7 +173,7 @@ defimpl Archetype.Type, for: Archetype.String do
 
     case ctx.actual <= ctx.expected do
       true -> :ok
-      false -> {:error, issue(opt.error, ctx)}
+      false -> {:error, [Archetype.Issue.from(opt.error, ctx)]}
     end
   end
 end

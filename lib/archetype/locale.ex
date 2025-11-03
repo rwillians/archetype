@@ -4,10 +4,12 @@ defmodule Archetype.Locale do
   """
 
   @doc ~S"""
+  Translates the given template string.
   """
-  @callback t(text :: String.t()) :: String.t()
+  @callback t(template :: String.t()) :: String.t()
 
   @typedoc ~S"""
+  Any module that implements the `Archetype.Locale` behaviour.
   """
   @type t() :: module()
 
